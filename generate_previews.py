@@ -236,7 +236,8 @@ def _supabase_req(method, path, body=None, extra_headers=None):
     req  = urllib.request.Request(f"{SUPABASE_URL}/rest/v1/{path}", data=data,
                                    headers=headers, method=method)
     with urllib.request.urlopen(req) as resp:
-        return json.loads(resp.read())
+        raw = resp.read()
+        return json.loads(raw) if raw else []
 
 
 def sync_db():
@@ -278,6 +279,22 @@ def sync_db():
                 "active":      True,
                 "metadata":    {},
             })
+
+    # Antes de upsertar, eliminar stale duplicates:
+    # si existe un producto con el mismo name+category pero distinto sku, lo borramos
+    # para evitar que cambios de SKU entre runs generen duplicados en el catálogo.
+    incoming_by_key = {(r["category"], r["name"]): r["sku"] for r in rows}
+    existing = _supabase_req("GET", f"products?tenant_id=eq.{TENANT_ID}&select=id,sku,name,category")
+    stale_ids = [
+        p["id"]
+        for p in existing
+        if (p["category"], p["name"]) in incoming_by_key
+        and p["sku"] != incoming_by_key[(p["category"], p["name"])]
+    ]
+    if stale_ids:
+        id_filter = ",".join(stale_ids)
+        _supabase_req("DELETE", f"products?id=in.({id_filter})&tenant_id=eq.{TENANT_ID}", body=None)
+        print(f"  ⚠ {len(stale_ids)} producto(s) obsoleto(s) eliminados (SKU cambió)")
 
     result = _supabase_req("POST", "products?on_conflict=tenant_id,sku", rows)
     print(f"  ✓ {len(result)} productos upserted en DB")
