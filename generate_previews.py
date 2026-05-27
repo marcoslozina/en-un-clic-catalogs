@@ -17,18 +17,20 @@ Comandos:
 
 Requiere:
   pip install Pillow
-  Variables de entorno: SUPABASE_URL, SUPABASE_KEY (service_role), TENANT_ID
-  O editá las constantes SUPABASE_URL/KEY/TENANT en este archivo.
+  Variables de entorno (requeridas para sync-db):
+    SUPABASE_URL   — URL del proyecto Supabase
+    SUPABASE_KEY   — service_role key (NUNCA commitear este valor)
+    TENANT_ID      — UUID del tenant en Botly
 
 """
 
 import os, sys, json, urllib.request
 from PIL import Image, ImageDraw, ImageFont
 
-# ── Config DB (sobreescribible con env vars) ──────────────────────────────────
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://wuwytnobxlzzyxhpmbbz.supabase.co")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "REDACTED_SERVICE_ROLE_KEY")
-TENANT_ID    = os.getenv("TENANT_ID",    "51159fcf-0e35-4955-8b14-758bfa515b79")
+# ── Config DB — solo desde variables de entorno, nunca hardcodeado ────────────
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
+TENANT_ID    = os.getenv("TENANT_ID",    "")
 BASE_IMG_URL = "https://raw.githubusercontent.com/marcoslozina/en-un-clic-catalogs/main"
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
@@ -242,6 +244,14 @@ def _supabase_req(method, path, body=None, extra_headers=None):
 
 def sync_db():
     """Upsert products a la DB usando SKU como clave única."""
+    missing = [v for v in ("SUPABASE_URL", "SUPABASE_KEY", "TENANT_ID") if not os.getenv(v)]
+    if missing:
+        print(f"  ✗ Faltan variables de entorno: {', '.join(missing)}")
+        print("    Exportalas antes de correr sync-db:")
+        for v in missing:
+            print(f"      export {v}=...")
+        sys.exit(1)
+
     rows = []
 
     # Combos
