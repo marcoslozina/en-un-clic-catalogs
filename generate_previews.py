@@ -147,6 +147,22 @@ def centered_text(draw, text, y, font_obj, color, width=W):
     tw = bbox[2] - bbox[0]
     draw.text(((width - tw) // 2, y), text, font=font_obj, fill=color)
 
+def pixel_wrap(text, draw, font, max_px):
+    """Wrap text at actual rendered pixel width — avoids cutoff on any font/size."""
+    words = text.split()
+    lines, cur = [], ""
+    for w in words:
+        test = cur + (" " if cur else "") + w
+        bb = draw.textbbox((0, 0), test, font=font)
+        if bb[2] > max_px and cur:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = test
+    if cur:
+        lines.append(cur)
+    return lines
+
 def price_str(p):
     """$72.000  (punto como miles, sin doble $$)"""
     return f"${p:,.0f}".replace(",", ".")
@@ -179,10 +195,9 @@ def generate_combos_catalog():
     for i, combo in enumerate(combos):
         draw.text((margin_l, y + 10), combo["name"], font=f_name, fill=DARK_TEXT)
 
-        desc = combo["description"]
-        if len(desc) > 62:
-            desc = desc[:59] + "…"
-        draw.text((margin_l, y + 54), desc, font=f_desc, fill=LIGHT_TEXT)
+        desc_lines = pixel_wrap(combo["description"], draw, f_desc, 740)
+        for li, dl in enumerate(desc_lines[:3]):
+            draw.text((margin_l, y + 54 + li * 30), dl, font=f_desc, fill=LIGHT_TEXT)
 
         p_text = price_str(combo["price"])
         bbox   = draw.textbbox((0, 0), p_text, font=f_price)
@@ -201,8 +216,13 @@ def generate_combos_catalog():
 
 
 def fix_individual_headers():
-    """Repinta el header de cada ficha individual (corrige $$ y mantiene fotos)."""
-    HEADER_H = 295
+    """Repinta el header y banda de descripción de cada ficha individual."""
+    HEADER_H    = 295
+    DESC_BAND_H = 78
+    DESC_BG     = (255, 250, 220)  # champagne claro
+    f_desc_band = fnt(FONT_REG, 22)
+    MAX_DESC_PX = 900
+
     for combo in COMBOS:
         path = os.path.join(REPO_DIR, f"preview_combo-{combo['slug']}.jpg")
         if not os.path.exists(path):
@@ -211,11 +231,21 @@ def fix_individual_headers():
         img  = Image.open(path).convert("RGB")
         draw = ImageDraw.Draw(img)
 
+        # ── Header dorado ──
         draw.rectangle([0, 0, W, HEADER_H], fill=GOLD)
-        centered_text(draw, "En Un Clic",                          30,  fnt(FONT_BOLD,  44), WHITE)
-        centered_text(draw, combo["name"],                          90,  fnt(FONT_BLACK, 52), WHITE)
-        centered_text(draw, f"{price_str(combo['price'])} ARS",   160,  fnt(FONT_BLACK, 52), WHITE)
+        centered_text(draw, "En Un Clic",                               30,  fnt(FONT_BOLD,  44), WHITE)
+        centered_text(draw, combo["name"],                               90,  fnt(FONT_BLACK, 52), WHITE)
+        centered_text(draw, f"{price_str(combo['price'])} ARS",        160,  fnt(FONT_BLACK, 52), WHITE)
         centered_text(draw, f"* {combo['productos']} productos incluidos", 228, fnt(FONT_BOLD, 30), WHITE)
+
+        # ── Banda de descripción — borra texto viejo y redibuja completo ──
+        draw.rectangle([0, HEADER_H, W, HEADER_H + DESC_BAND_H], fill=DESC_BG)
+        lines = pixel_wrap(combo["description"], draw, f_desc_band, MAX_DESC_PX)
+        if len(lines) == 1:
+            centered_text(draw, lines[0], HEADER_H + 26, f_desc_band, DARK_TEXT)
+        else:
+            centered_text(draw, lines[0], HEADER_H + 12, f_desc_band, DARK_TEXT)
+            centered_text(draw, lines[1], HEADER_H + 42, f_desc_band, DARK_TEXT)
 
         img.save(path, "JPEG", quality=92)
         print(f"  ✓ preview_combo-{combo['slug']}.jpg")
