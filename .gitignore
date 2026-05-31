@@ -1,0 +1,22 @@
+# Secretos — NUNCA commitear
+.env
+.env.local
+.env.production
+.env.staging
+# Excepción: el template sí va al repo
+!.env.example
+secrets.py
+secrets.json
+config.local.py
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
