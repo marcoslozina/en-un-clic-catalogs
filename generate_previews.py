@@ -476,13 +476,13 @@ def sync_db():
     result = _supabase_req("POST", "products?on_conflict=tenant_id,sku", rows)
     print(f"  ✓ {len(result)} productos upserted en DB")
 
-    tenants = _supabase_req("GET", f"tenants?id=eq.{TENANT_ID}&select=retail_config")
-    if tenants:
-        rc = tenants[0].get("retail_config") or {}
-        rc["catalog_base_url"] = BASE_IMG_URL
-        _supabase_req("PATCH", f"tenants?id=eq.{TENANT_ID}", {"retail_config": rc},
-                      extra_headers={"Prefer": "return=minimal"})
-        print(f"  ✓ retail_config.catalog_base_url → {BASE_IMG_URL}")
+    # NO tocar retail_config.catalog_base_url desde acá. Este repo genera el
+    # catálogo de COMPARTIR (1080×1350, con precios), que es OTRO sistema que el
+    # catálogo del BOT (grilla sin precios, servida desde el server botly). El
+    # campo catalog_base_url apunta al server y lo administra `botly/scripts/db/
+    # images.sh set-url`. Si lo pisamos con la URL de GitHub, el bot manda las
+    # imágenes con precios y las de kit individual dan 404 (naming distinto).
+    print("  · retail_config.catalog_base_url NO se toca (lo maneja images.sh set-url en botly)")
 
 
 # ═════════════════════════════════════════════════════════════════════════════
