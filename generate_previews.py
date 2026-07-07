@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
 """
-Generador y sincronizador de catálogos — En Un Clic
+⛔ DEPRECADO — NO USAR (2026-07-07)
+====================================================
+Este generador HARDCODEA su propia lista de combos/productos, independiente de la
+fuente de verdad (botly/data/combos.json). Eso causó DRIFT: quedó en 6 combos
+mientras el bot ya tenía 9. Además usaba otro naming de archivo (preview_combo-<slug>)
+que el bot NUNCA sirvió (el bot espera preview_combo-combo-<slug>).
+
+✅ FUENTE ÚNICA: botly/data/combos.json + product-images.json
+✅ ÚNICO GENERADOR: botly/scripts/generate_combo_images.py
+   (lee la fuente única, genera preview_combo-combo-<sku>.jpg, deploy con images.sh)
+
+No agregar combos ni productos acá. Ver docs de FUENTE_DE_VERDAD.
+────────────────────────────────────────────────────
+
+Generador y sincronizador de catálogos — En Un Clic (LEGACY)
 ====================================================
 
 Genera TODAS las imágenes del catálogo componiendo las fotos de producto desde
